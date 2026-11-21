@@ -97,21 +97,20 @@ thead th{background:var(--tb-head);color:var(--tb-headtx);font-weight:600;positi
 .sumt td.sum,.sumt th.sum{font-weight:700}
 .sumt tbody tr:not(.tot) td.sum{background:var(--tb-sub)}
 
-/* 월별 입력 표: 구분·항목·월 예산 계획액 고정 */
+/* 월별 상세 표: 구분·항목명만 고정 (항목설명·월 예산 계획액은 옆으로 같이 이동) */
 #gridWrap{max-height:72vh}
 td input.num,td input.txt,td select{width:100%;border:0;background:transparent;color:var(--tx);font:inherit;padding:4px;border-radius:4px}
 td input.num{text-align:right;min-width:96px}
 td input.txt{text-align:left}
 td input:focus,td select:focus{outline:2px solid var(--pri);background:var(--card)}
 .grid tbody td{background:var(--card)}
-.grid .s1,.grid .s2,.grid .s3{position:sticky;z-index:2}
-.grid thead .s1,.grid thead .s2,.grid thead .s3{z-index:4}
+.grid .s1,.grid .s2{position:sticky;z-index:2}
+.grid thead .s1,.grid thead .s2{z-index:4}
 .grid .s1{left:0;width:96px;min-width:96px;max-width:96px;text-align:center;font-weight:600;padding:2px 4px}
-.grid .s2{left:96px;width:140px;min-width:140px;max-width:140px;padding:2px 4px}
+.grid .s2{left:96px;width:140px;min-width:140px;max-width:140px;padding:2px 4px;box-shadow:6px 0 6px -4px rgba(0,0,0,.18)}
 .grid{--dw:170px}.grid.nodesc{--dw:0px}
-.grid .ds{position:sticky;z-index:2;left:236px;width:var(--dw);min-width:var(--dw);max-width:var(--dw)}
-.grid thead .ds{z-index:4}
-.grid .s3{left:calc(236px + var(--dw));width:128px;min-width:128px;max-width:128px;box-shadow:6px 0 6px -4px rgba(0,0,0,.18)}
+.grid .ds{width:var(--dw);min-width:var(--dw);max-width:var(--dw)}
+.grid .s3{width:128px;min-width:128px;max-width:128px}
 .grid tbody td.s3{background:var(--tb-zebra)}
 .grid td.s1 select{font-weight:600;text-align:center;cursor:pointer}
 .grid .nm{display:flex;align-items:center;gap:2px}
@@ -165,9 +164,8 @@ button:disabled{opacity:.45;cursor:default}
 .gsmsg.ok{color:var(--ok)}.gsmsg.bad{color:var(--bad)}
 #cfgBtn{padding:6px 10px;font-size:15px;line-height:1}
 /* 월별 요약: 월 예산 열 */
-.sumt .sb{position:sticky;left:120px;z-index:2;min-width:104px;box-shadow:6px 0 6px -4px rgba(0,0,0,.18)}
-.sumt thead th.sb{z-index:4}
-.sumt td:first-child,.sumt th:first-child{width:120px;max-width:120px}
+.sumt .sb{min-width:104px}
+.sumt td:first-child,.sumt th:first-child{width:120px;max-width:120px;box-shadow:6px 0 6px -4px rgba(0,0,0,.18)}
 .sumt tbody tr:not(.tot) td.sb{background:var(--tb-sub)}
 .sumt tr.tot .vr.b{color:#bcd6ff}.sumt tr.tot .vr.r{color:#ffb3b3}
 .rowacts{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
@@ -238,7 +236,7 @@ details.cm[open] summary::after{content:"접기 ▴"}
   #gridWrap{max-height:64vh}
   .grid .s1{width:66px;min-width:66px;max-width:66px;padding:1px 2px}
   .grid .s2{left:66px;width:86px;min-width:86px;max-width:86px;padding:1px 2px}
-  .grid .s3{left:152px;width:84px;min-width:84px;max-width:84px;padding:4px 4px}
+  .grid .s3{width:84px;min-width:84px;max-width:84px;padding:4px 4px}
   .grid td.s1 select{padding:4px 0;font-size:12px}
   .grid .del{padding:2px 3px}
   td input.num{min-width:70px;padding:5px 2px}
@@ -248,11 +246,7 @@ details.cm[open] summary::after{content:"접기 ▴"}
   .vr{font-size:10px;margin-left:2px}
   .grid{--dw:110px}
   .grid td.ds{font-size:11px}
-  .grid .ds{left:152px}
-  /* 휴대폰에서 항목설명을 보이면 구분·항목명만 고정 */
-  .grid:not(.nodesc) .ds,.grid:not(.nodesc) .s3{left:auto;box-shadow:none}
-  .grid:not(.nodesc) .s2{box-shadow:6px 0 6px -4px rgba(0,0,0,.18)}
-  .sumt .sb{left:76px;min-width:80px}
+  .sumt .sb{min-width:80px}
   .sumt td:first-child,.sumt th:first-child{width:76px;max-width:76px}
   .cmt td{padding:2px 3px}
   .cmt td select{min-width:80px}
@@ -297,7 +291,20 @@ details.cm[open] summary::after{content:"접기 ▴"}
   </section>
 
   <section>
-    <div class="sh"><h2>월별 요약</h2><span class="lb" id="sumPer"></span></div>
+    <div class="sh">
+      <h2>월별 요약 <span class="lb" id="sumPer" style="font-weight:400"></span></h2>
+      <div class="period">
+        <span class="lb">표시 기간</span>
+        <input type="month" id="ss"> <span>~</span> <input type="month" id="se">
+        <div class="chips">
+          <button class="chip" data-sr="3">최근 3개월</button>
+          <button class="chip" data-sr="6">최근 6개월</button>
+          <button class="chip" data-sr="12">최근 12개월</button>
+          <button class="chip" data-sr="ytd">올해</button>
+          <button class="chip" data-sr="pm2">이번 달 ±2</button>
+        </div>
+      </div>
+    </div>
     <div class="scroll"><table class="sumt" id="sum"></table></div>
   </section>
 
@@ -654,9 +661,11 @@ $("cfgOk").onclick=async()=>{const c=cfgVals();
   dirty=false;location.reload()};
 
 /* ---------- 화면 크기 조절 (기기별로 기억) ---------- */
+// BASE: 화면 전체 기준 크기(예전 화면의 85%). 화면 표시 100% = 이 기준 크기
+const BASE=.85;
 const ZOOMS=[.75,.8,.85,.9,.95,1,1.05,1.1,1.2,1.3];
 let zoom=1;try{const z=parseFloat(localStorage.getItem("chad-zoom"));if(ZOOMS.includes(z))zoom=z}catch(e){}
-function applyZoom(){document.body.style.zoom=zoom;$("zVal").textContent=Math.round(zoom*100)+"%";
+function applyZoom(){document.body.style.zoom=Math.round(zoom*BASE*1000)/1000;$("zVal").textContent=Math.round(zoom*100)+"%";
   $("zOut").disabled=zoom<=ZOOMS[0];$("zIn").disabled=zoom>=ZOOMS[ZOOMS.length-1];
   try{localStorage.setItem("chad-zoom",String(zoom))}catch(e){}}
 const stepZoom=d=>{const i=ZOOMS.indexOf(zoom);zoom=ZOOMS[Math.min(ZOOMS.length-1,Math.max(0,i+d))];applyZoom()};
@@ -675,7 +684,16 @@ function setRecent(n){const e=nowYM();P={s:addM(e,-(n-1)),e}}
 // 월별 입력 표시 기간: 처음엔 이번 달 기준 앞뒤 2개월(5개월), 이후엔 사용자가 고른 기간 유지
 let GR=null;
 const gridDefault=()=>{const n=nowYM();return{s:addM(n,-2),e:addM(n,2)}};
+// 월별 요약 표시 기간 (종합 현황과 따로): 처음엔 최근 6개월
+let SP={s:"",e:""};
+function sumRange(r){const e=nowYM();if(r==="ytd")return{s:e.slice(0,4)+"-01",e};if(r==="pm2")return{s:addM(e,-2),e:addM(e,2)};return{s:addM(e,-(+r-1)),e}}
+function markSChips(){document.querySelectorAll(".chip[data-sr]").forEach(b=>{const d=sumRange(b.dataset.sr);b.classList.toggle("on",d.s===SP.s&&d.e===SP.e)})}
+function setSum(s,e){if(!isYM(s)||!isYM(e))return;if(s>e)[s,e]=[e,s];if(range(s,e).length>=240)s=addM(e,-239);
+  SP={s,e};$("ss").value=s;$("se").value=e;markSChips();renderSummary()}
+$("ss").onchange=$("se").onchange=()=>setSum($("ss").value,$("se").value);
+document.querySelectorAll(".chip[data-sr]").forEach(b=>b.onclick=()=>{const d=sumRange(b.dataset.sr);setSum(d.s,d.e)});
 function initRanges(){if(!P.s)setRecent(1);$("ps").value=P.s;$("pe").value=P.e;
+  if(!SP.s)SP=sumRange("6");$("ss").value=SP.s;$("se").value=SP.e;markSChips();
   if(M){if(!GR)GR=gridDefault();M.gs=GR.s;M.ge=GR.e;$("gs").value=M.gs;$("ge").value=M.ge;markGNow()}markChips()}
 function markGNow(){const d=gridDefault();$("gNow").classList.toggle("on",!!M&&M.gs===d.s&&M.ge===d.e)}
 function markChips(){const e=nowYM();document.querySelectorAll(".chip[data-r]").forEach(b=>{const r=b.dataset.r;
@@ -757,8 +775,9 @@ function summaryTable(D){
 function renderSummary(){if(!M)return;
   const D=aggregate(P.s,P.e);
   $("cards").innerHTML=CARDS.map(g=>groupCard(g,D)).join("")+balanceCard(D);
-  $("sum").innerHTML=summaryTable(D);
-  $("sumPer").textContent=`${lab(P.s)} ~ ${lab(P.e)} (${D.months.length}개월)`;
+  const S=SP.s===P.s&&SP.e===P.e?D:aggregate(SP.s||P.s,SP.e||P.e);
+  $("sum").innerHTML=summaryTable(S);
+  $("sumPer").textContent=`${S.months.length}개월`;
 }
 
 /* ---------- 월별 입력 ---------- */
