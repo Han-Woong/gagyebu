@@ -118,6 +118,30 @@ td input:focus,td select:focus{outline:2px solid var(--pri);background:var(--car
 .grid tr:hover .del{opacity:1}.grid .del:hover{color:var(--bad)}
 .grid tr.tot td{font-weight:700;background:var(--tb-grp);color:var(--tb-grptx)}
 .grid tr.tot.bal td{background:var(--tb-tot);color:var(--tb-tottx)}
+/* 종합 현황: 월별 추이 그래프 (접었다 펼치기) */
+details.trend{margin-top:12px;border-top:1px solid var(--line);padding-top:10px}
+details.trend summary{cursor:pointer;font-weight:700;font-size:14px;list-style:none;display:flex;justify-content:space-between;align-items:center;gap:8px}
+details.trend summary::-webkit-details-marker{display:none}
+details.trend summary::after{content:"펼치기 ▾";font-size:12px;font-weight:400;color:var(--mut)}
+details.trend[open] summary::after{content:"접기 ▴"}
+.tlegend{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12px;color:var(--mut);margin:10px 0 4px}
+.tlegend span{display:inline-flex;align-items:center;gap:5px}
+.tlegend i{width:10px;height:10px;border-radius:3px;display:inline-block}
+.tlegend i.ln{height:2px;width:14px;border-radius:1px}
+.tchart{position:relative;overflow-x:auto}
+.tchart svg{display:block;font-family:inherit}
+.tchart .ax{fill:var(--mut);font-size:11px}
+.tchart .gl{stroke:var(--line);stroke-width:1}
+.tchart .zl{stroke:var(--mut);stroke-width:1}
+.tchart .hit{fill:transparent;cursor:pointer}
+.tchart .hit.on{fill:var(--tx);fill-opacity:.05}
+.ttip{position:absolute;pointer-events:none;background:var(--card);color:var(--tx);border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:12px;box-shadow:0 4px 14px rgba(0,0,0,.15);white-space:nowrap;display:none;z-index:5}
+.ttip b{display:block;margin-bottom:4px}
+.ttip div{display:flex;justify-content:space-between;gap:14px;font-variant-numeric:tabular-nums}
+.ttip i{width:8px;height:8px;border-radius:2px;display:inline-block;margin-right:5px}
+.grid td.sum,.grid th.sum{font-weight:700;border-left:2px solid var(--tb-line)}
+.grid tbody tr:not(.tot) td.sum,.grid tbody tr:not(.tot) td.avg{background:var(--tb-zebra)}
+.grid tr.tot.bal .vr.b{color:#bcd6ff}.grid tr.tot.bal .vr.r{color:#ffb3b3}
 .grid tr.tot.bal td .neg{color:#ffb3b3}.grid tr.tot.bal td .pos{color:#b8f5d6}
 .grid td.m{min-width:110px}
 th.cur{background:#3a6fd0 !important}
@@ -288,6 +312,11 @@ details.cm[open] summary::after{content:"접기 ▴"}
     </div>
     <div class="cards" id="cards"><div class="loading">불러오는 중…</div></div>
     <div class="swipe">← 옆으로 밀어서 수입 · 저축투자 · 지출 · 잔액 보기 →</div>
+    <details class="trend" id="trendBox">
+      <summary><span>📈 월별 추이 그래프 <span class="lb" id="trendPer"></span></span></summary>
+      <div class="tlegend" id="trendLegend"></div>
+      <div class="tchart" id="trend"></div>
+    </details>
   </section>
 
   <section>
@@ -314,7 +343,7 @@ details.cm[open] summary::after{content:"접기 ▴"}
       <div class="period">
         <span class="lb">표시 기간</span>
         <input type="month" id="gs"> <span>~</span> <input type="month" id="ge">
-        <button class="chip" id="gNow" title="이번 달 기준 앞뒤 2개월(5개월)">이번 달 ±2</button>
+        <button class="chip" id="gNow" title="이번 달만 보기">이번 달</button>
       </div>
     </div>
     <div class="gtools" style="margin-bottom:10px">
@@ -681,9 +710,9 @@ window.addEventListener("focus",async()=>{
 /* ---------- 기간 ---------- */
 let P={s:"",e:""};
 function setRecent(n){const e=nowYM();P={s:addM(e,-(n-1)),e}}
-// 월별 입력 표시 기간: 처음엔 이번 달 기준 앞뒤 2개월(5개월), 이후엔 사용자가 고른 기간 유지
+// 월별 상세 표시 기간: 처음엔 전월·이번 달·다음 달(3개월), 이후엔 사용자가 고른 기간 유지
 let GR=null;
-const gridDefault=()=>{const n=nowYM();return{s:addM(n,-2),e:addM(n,2)}};
+const gridDefault=()=>{const n=nowYM();return{s:addM(n,-1),e:addM(n,1)}};
 // 월별 요약 표시 기간 (종합 현황과 따로): 처음엔 최근 6개월
 let SP={s:"",e:""};
 function sumRange(r){const e=nowYM();if(r==="ytd")return{s:e.slice(0,4)+"-01",e};if(r==="pm2")return{s:addM(e,-2),e:addM(e,2)};return{s:addM(e,-(+r-1)),e}}
@@ -695,7 +724,7 @@ document.querySelectorAll(".chip[data-sr]").forEach(b=>b.onclick=()=>{const d=su
 function initRanges(){if(!P.s)setRecent(1);$("ps").value=P.s;$("pe").value=P.e;
   if(!SP.s)SP=sumRange("6");$("ss").value=SP.s;$("se").value=SP.e;markSChips();
   if(M){if(!GR)GR=gridDefault();M.gs=GR.s;M.ge=GR.e;$("gs").value=M.gs;$("ge").value=M.ge;markGNow()}markChips()}
-function markGNow(){const d=gridDefault();$("gNow").classList.toggle("on",!!M&&M.gs===d.s&&M.ge===d.e)}
+function markGNow(){const n=nowYM();$("gNow").classList.toggle("on",!!M&&M.gs===n&&M.ge===n)}
 function markChips(){const e=nowYM();document.querySelectorAll(".chip[data-r]").forEach(b=>{const r=b.dataset.r;
   const on=r==="ytd"?(P.s===e.slice(0,4)+"-01"&&P.e===e):(P.e===e&&P.s===addM(e,-(+r-1)));b.classList.toggle("on",on)})}
 function onPeriod(){let s=$("ps").value,e=$("pe").value;if(!isYM(s)||!isYM(e))return;if(s>e)[s,e]=[e,s];
@@ -706,7 +735,7 @@ document.querySelectorAll(".chip[data-r]").forEach(b=>b.onclick=()=>{const r=b.d
 function onGrid(){if(!M)return;let s=$("gs").value,e=$("ge").value;if(!isYM(s)||!isYM(e))return;if(s>e)[s,e]=[e,s];
   if(range(s,e).length>60)e=addM(s,59);M.gs=s;M.ge=e;GR={s,e};$("gs").value=s;$("ge").value=e;markGNow();renderGrid()}
 $("gs").onchange=onGrid;$("ge").onchange=onGrid;
-$("gNow").onclick=()=>{if(!M)return;const d=gridDefault();$("gs").value=d.s;$("ge").value=d.e;onGrid()};
+$("gNow").onclick=()=>{if(!M)return;const n=nowYM();$("gs").value=n;$("ge").value=n;onGrid()}; // 이번 달만 보기
 
 /* ---------- 집계 (모델 기준) ---------- */
 function aggregate(s,e){
@@ -760,11 +789,11 @@ function balanceCard(D){
 
 /* ---------- 월별 요약 (블루 테마) ---------- */
 function summaryTable(D){
-  const ms=D.months,n=ms.length,cur=nowYM();
+  const ms=D.months,n=ms.length,cur=nowYM(),na=ms.filter(m=>m<=cur).length||n; // na: 월평균 계산용(미래 달 제외)
   let h=`<thead><tr><th>구분</th><th class="sb">월 예산 계획액</th>${ms.map(m=>`<th${m===cur?' class="cur"':""}>${lab(m)}</th>`).join("")}<th class="sum">합계</th><th>월평균</th></tr></thead><tbody>`;
   // card: 증감 색 기준(지출이면 많을수록 빨강), mb: 월 예산
   const line=(cls,label,arr,mb,card,fmt)=>{const t=arr.reduce((x,y)=>x+y,0);fmt=fmt||(v=>N(v));
-    h+=`<tr class="${cls}"><td>${label}</td><td class="sb">${fmt(mb)}</td>${arr.map(v=>`<td>${fmt(v)}${vr(card,v,mb)}</td>`).join("")}<td class="sum">${fmt(t)}</td><td>${fmt(t/n)}</td></tr>`};
+    h+=`<tr class="${cls}"><td>${label}</td><td class="sb">${fmt(mb)}</td>${arr.map(v=>`<td>${fmt(v)}${vr(card,v,mb)}</td>`).join("")}<td class="sum">${fmt(t)}</td><td>${fmt(t/na)}</td></tr>`};
   CARDS.forEach(g=>{const o=D.R[g];line("grp",CARD_LABEL[g],o.byM,o.b/n,g);o.cats.forEach(c=>line("sub",esc(c.cat),c.byM,c.b/n,g))});
   line("tot","잔액",D.bal.byM,D.bal.b/n,"수입",v=>v<0?`<span class="neg">${N(v)}</span>`:N(v));
   const inc=D.R["수입"],inv=D.R["저축투자"];
@@ -775,10 +804,54 @@ function summaryTable(D){
 function renderSummary(){if(!M)return;
   const D=aggregate(P.s,P.e);
   $("cards").innerHTML=CARDS.map(g=>groupCard(g,D)).join("")+balanceCard(D);
+  renderTrend(D);
   const S=SP.s===P.s&&SP.e===P.e?D:aggregate(SP.s||P.s,SP.e||P.e);
   $("sum").innerHTML=summaryTable(S);
   $("sumPer").textContent=`${S.months.length}개월`;
 }
+
+/* ---------- 종합 현황: 월별 추이 그래프 (종합 현황 누계 기간 기준, 펼쳤을 때만 그림) ----------
+   수입·저축투자·지출 = 막대, 잔액 = 선. 모두 같은 금액 축(원) 하나 사용 */
+const TS=[["inc","수입","수입","--a-inc"],["inv","저축투자","저축·투자","--a-inv"],["exp","지출","지출","--a-exp"]];
+const man=v=>{const a=Math.abs(v);return a>=1e8?(v/1e8).toFixed(a>=1e9?0:1).replace(/\.0$/,"")+"억":a>=1e4?Math.round(v/1e4).toLocaleString("ko-KR")+"만":N(v)};
+function niceStep(raw){if(!(raw>0))return 1;const p=10**Math.floor(Math.log10(raw)),f=raw/p;return(f<=1?1:f<=2?2:f<=2.5?2.5:f<=5?5:10)*p}
+function renderTrend(D){
+  const box=$("trendBox");if(!M)return;
+  const ms=(D||aggregate(P.s,P.e)).months;$("trendPer").textContent=`${lab(P.s)} ~ ${lab(P.e)} · ${ms.length}개월`;
+  if(!box.open)return;
+  D=D||aggregate(P.s,P.e);
+  const n=ms.length,ser=TS.map(([k,g,l,c])=>({k,l,c,v:D.R[g].byM})),bal=D.bal.byM;
+  $("trendLegend").innerHTML=ser.map(s=>`<span><i style="background:var(${s.c})"></i>${s.l}</span>`).join("")+`<span><i class="ln" style="background:var(--a-bal)"></i>잔액</span>`;
+  const el=$("trend");
+  if(![...ser.flatMap(s=>s.v),...bal].some(v=>v)){el.innerHTML=`<div class="loading">이 기간에 입력된 금액이 없습니다. 위의 누계 기간을 바꿔 보세요.</div>`;return}
+  const all=[...ser.flatMap(s=>s.v),...bal,0];let hi=Math.max(...all),lo=Math.min(...all);
+  const step=niceStep((hi-lo)/4||1);hi=Math.ceil(hi/step)*step;lo=Math.floor(lo/step)*step;if(hi===lo)hi=lo+step;
+  const H=240,pl=52,pr=10,pt=12,pb=26,band=Math.max(46,((el.clientWidth||600)-pl-pr)/n),W=pl+pr+band*n;
+  const y=v=>pt+(hi-v)/(hi-lo)*(H-pt-pb),y0=y(0),bw=Math.max(4,Math.min(18,(band*.72-4)/3)),cx=j=>pl+band*j+band/2;
+  const bar=(x,v)=>{const yt=y(v),h=Math.abs(yt-y0);if(h<.5)return"";const r=Math.min(4,h,bw/2),w=bw;
+    return v>=0?`M${x},${y0}V${yt+r}Q${x},${yt} ${x+r},${yt}H${x+w-r}Q${x+w},${yt} ${x+w},${yt+r}V${y0}Z`
+               :`M${x},${y0}V${yt-r}Q${x},${yt} ${x+r},${yt}H${x+w-r}Q${x+w},${yt} ${x+w},${yt-r}V${y0}Z`};
+  let g="";
+  for(let t=lo;t<=hi+step/2;t+=step){const yy=y(t);g+=`<line class="${t===0?"zl":"gl"}" x1="${pl}" x2="${W-pr}" y1="${yy}" y2="${yy}"/><text class="ax" x="${pl-6}" y="${yy+4}" text-anchor="end">${man(t)}</text>`}
+  const every=Math.ceil(n/(band<60?8:14)),cur=nowYM();
+  ms.forEach((m,j)=>{if(j%every===0||j===n-1)g+=`<text class="ax" x="${cx(j)}" y="${H-8}" text-anchor="middle"${m===cur?' style="font-weight:700;fill:var(--tx)"':""}>’${m.slice(2,4)}.${+m.slice(5)}</text>`;
+    const x0=cx(j)-(bw*3+4)/2;ser.forEach((s,k)=>{const d=bar(x0+k*(bw+2),s.v[j]);if(d)g+=`<path d="${d}" fill="var(${s.c})"/>`})});
+  if(n>1)g+=`<polyline points="${bal.map((v,j)=>cx(j)+","+y(v)).join(" ")}" fill="none" stroke="var(--a-bal)" stroke-width="2" stroke-linejoin="round"/>`;
+  bal.forEach((v,j)=>g+=`<circle cx="${cx(j)}" cy="${y(v)}" r="4" fill="var(--a-bal)" stroke="var(--card)" stroke-width="2"/>`);
+  ms.forEach((m,j)=>g+=`<rect class="hit" data-j="${j}" x="${pl+band*j}" y="${pt}" width="${band}" height="${H-pt-pb}"/>`);
+  el.innerHTML=`<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="월별 수입·저축투자·지출·잔액 추이">${g}</svg><div class="ttip" id="ttip"></div>`;
+  const tip=$("ttip"),svg=el.querySelector("svg");
+  const show=j=>{svg.querySelectorAll(".hit").forEach(r=>r.classList.toggle("on",+r.dataset.j===j));
+    tip.innerHTML=`<b>${lab(ms[j])}</b>`+ser.map(s=>`<div><span><i style="background:var(${s.c})"></i>${s.l}</span><span>${N(s.v[j])}원</span></div>`).join("")+
+      `<div><span><i style="background:var(--a-bal)"></i>잔액</span><span${bal[j]<0?' class="neg"':""}>${N(bal[j])}원</span></div>`;
+    tip.style.display="block";const x=cx(j)-el.scrollLeft,tw=tip.offsetWidth;tip.style.left=Math.max(0,Math.min(el.clientWidth-tw,x+12>el.clientWidth-tw?x-tw-12:x+12))+"px";tip.style.top="8px"};
+  const hide=()=>{tip.style.display="none";svg.querySelectorAll(".hit.on").forEach(r=>r.classList.remove("on"))};
+  svg.addEventListener("pointermove",e=>{const r=e.target.closest(".hit");r?show(+r.dataset.j):hide()});
+  svg.addEventListener("pointerdown",e=>{const r=e.target.closest(".hit");if(r)show(+r.dataset.j)});
+  svg.addEventListener("pointerleave",e=>{if(e.pointerType==="mouse")hide()});
+}
+$("trendBox").addEventListener("toggle",()=>renderTrend());
+window.addEventListener("resize",()=>{clearTimeout(window.__tr);window.__tr=setTimeout(()=>renderTrend(),200)});
 
 /* ---------- 월별 입력 ---------- */
 function kindSelect(i,kind){
@@ -793,11 +866,16 @@ function vr(card,a,b){
   return`<span class="vr ${good?"b":"r"}" title="계획 ${N(b)}원 대비 ${up?"+":"−"}${N(Math.abs(d))}원 ${up?"상승":"하락"}">(${up?"▲":"▼"}${p||"<1"}%)</span>`;
 }
 let EDIT=false;
+function gridHint(hidden){$("gHint").textContent=EDIT?"(편집 중 — 다 고친 뒤 💾 저장을 눌러야 엑셀에 반영됩니다)":
+  `(보기 모드${hidden?` — 이 기간에 금액이 없는 항목 ${hidden}개 숨김`:""} · ✎ 편집을 누르면 모든 항목이 보이고 고칠 수 있습니다)`}
 function renderGrid(){
   const ms=range(M.gs,M.ge),cur=nowYM();
   $("grid").classList.toggle("nodesc",!$("showDesc").checked);
-  let h=`<thead><tr><th class="s1">구분</th><th class="s2">항목명</th><th class="ds">항목설명</th><th class="s3">월 예산 계획액</th>${ms.map(m=>`<th${m===cur?' class="cur"':""}>${lab(m)}</th>`).join("")}</tr></thead><tbody>`;
+  let h=`<thead><tr><th class="s1">구분</th><th class="s2">항목명</th><th class="ds">항목설명</th><th class="s3">월 예산 계획액</th>${ms.map(m=>`<th${m===cur?' class="cur"':""}>${lab(m)}</th>`).join("")}<th class="sum">합계</th><th class="avg">월평균</th></tr></thead><tbody>`;
+  // 보기 모드: 선택한 기간에 금액이 하나도 없는 항목은 숨김 (편집 모드에서는 모두 표시)
+  let hidden=0;
   sortedItems().forEach(({it,i})=>{const c=catOf(it.kind),card=c&&c.card;
+    if(!EDIT&&!ms.some(m=>it.vals[m])){hidden++;return}
     h+=`<tr><td class="s1" style="background:var(--k-${c?c.card:"x"})">`+(EDIT?kindSelect(i,it.kind):`<span class="vt">${esc(it.kind)||'<span class="z">미지정</span>'}</span>`)+`</td>`;
     if(EDIT){
       h+=`<td class="s2"><div class="nm"><input class="txt" data-n="${i}" value="${esc(it.name)}" placeholder="항목명"><button class="del" data-del="${i}" title="이 항목 삭제">×</button></div></td>`+
@@ -810,19 +888,20 @@ function renderGrid(){
         `<td class="s3"><span class="vt">${N(it.budget)}</span></td>`+
         ms.map(m=>{const v=it.vals[m]||0;return`<td class="m">${v?N(v)+vr(card,v,it.budget):'<span class="z">-</span>'}</td>`}).join("");
     }
-    h+="</tr>";
+    h+=`<td class="sum" id="ga-${i}"></td><td class="avg" id="gv-${i}"></td></tr>`;
   });
+  if(!EDIT&&hidden&&hidden===M.items.length)h+=`<tr><td colspan="${ms.length+6}" style="text-align:center;color:var(--mut);padding:14px">이 기간에 입력된 금액이 없습니다. 기간을 바꾸거나 ✎ 편집에서 입력하세요.</td></tr>`;
   [["inc","수입","합계",""],["inv","저축·투자","합계",""],["exp","지출","합계",""],["bal","잔액","수입−저축투자−지출","bal"]].forEach(([k,a,b,c])=>{
-    h+=`<tr class="tot ${c}"><td class="s1">${a}</td><td class="s2" style="text-align:center">${b}</td><td class="ds"></td><td class="s3" id="gt-b-${k}"></td>${ms.map(m=>`<td id="gt-${k}-${m}"></td>`).join("")}</tr>`});
+    h+=`<tr class="tot ${c}"><td class="s1">${a}</td><td class="s2" style="text-align:center">${b}</td><td class="ds"></td><td class="s3" id="gt-b-${k}"></td>${ms.map(m=>`<td id="gt-${k}-${m}"></td>`).join("")}<td class="sum" id="gt-${k}-sum"></td><td class="avg" id="gt-${k}-avg"></td></tr>`});
   $("grid").innerHTML=h+"</tbody>";
+  gridHint(hidden);
   updTotals();
 }
 function updRowVar(i){const it=M.items[i],c=catOf(it.kind);
   document.querySelectorAll(`#grid .vs[data-vi="${i}"]`).forEach(s=>s.innerHTML=vr(c&&c.card,it.vals[s.dataset.vm]||0,it.budget))}
 function setEdit(on){EDIT=on;const b=$("editBtn");b.classList.toggle("on",on);b.textContent=on?"✓ 편집 완료":"✎ 편집";
   $("gridWrap").classList.toggle("edit",on);
-  $("gHint").textContent=on?"(편집 중 — 다 고친 뒤 💾 저장을 눌러야 엑셀에 반영됩니다)":"(보기 모드 — ✎ 편집을 눌러야 고칠 수 있습니다)";
-  if(M)renderGrid()}
+  if(M)renderGrid();else gridHint(0)}
 $("editBtn").onclick=()=>{if(EDIT&&document.activeElement&&$("grid").contains(document.activeElement))document.activeElement.blur();setEdit(!EDIT)};
 (function(){let v=null;try{v=localStorage.getItem("chad-desc")}catch(e){}
   $("showDesc").checked=v===null?!matchMedia("(max-width:640px)").matches:v==="1";
@@ -836,6 +915,13 @@ function updTotals(){
   [["inc","수입"],["inv","저축투자"],["exp","지출"]].forEach(([k,grp])=>{set("gt-b-"+k,N(B[grp]));ms.forEach(m=>{const v=g(grp+"|"+m);set(`gt-${k}-${m}`,N(v)+vr(grp,v,B[grp]))})});
   set("gt-b-bal",sgn(B["수입"]-B["저축투자"]-B["지출"]));
   ms.forEach(m=>set("gt-bal-"+m,sgn(g("수입|"+m)-g("저축투자|"+m)-g("지출|"+m))));
+  // 오른쪽 끝 합계·월평균 (월평균은 월 예산 계획액 대비 증감 표시)
+  // 월평균: 아직 오지 않은 달(다음 달 등)은 빼고 이번 달까지의 개월 수로 나눔
+  const cur=nowYM(),n=ms.filter(m=>m<=cur).length||ms.length||1,sumOf=grp=>ms.reduce((t,m)=>t+g(grp+"|"+m),0);
+  M.items.forEach((it,i)=>{const c=catOf(it.kind),t=ms.reduce((x,m)=>x+(it.vals[m]||0),0),a=Math.round(t/n);
+    set("ga-"+i,t?N(t):'<span class="z">-</span>');set("gv-"+i,t?N(a)+vr(c&&c.card,a,it.budget):'<span class="z">-</span>')});
+  [["inc","수입"],["inv","저축투자"],["exp","지출"]].forEach(([k,grp])=>{const t=sumOf(grp),a=Math.round(t/n);set(`gt-${k}-sum`,N(t));set(`gt-${k}-avg`,N(a)+vr(grp,a,B[grp]))});
+  const tb=sumOf("수입")-sumOf("저축투자")-sumOf("지출");set("gt-bal-sum",sgn(tb));set("gt-bal-avg",sgn(Math.round(tb/n)));
 }
 $("grid").addEventListener("input",e=>{
   const t=e.target,d=t.dataset;
