@@ -326,6 +326,7 @@ details.cm[open] summary::after{content:"접기 ▴"}
         <span class="lb">표시 기간</span>
         <input type="month" id="ss"> <span>~</span> <input type="month" id="se">
         <div class="chips">
+          <button class="chip" data-sr="1">이번 달</button>
           <button class="chip" data-sr="3">최근 3개월</button>
           <button class="chip" data-sr="6">최근 6개월</button>
           <button class="chip" data-sr="12">최근 12개월</button>
@@ -713,7 +714,7 @@ function setRecent(n){const e=nowYM();P={s:addM(e,-(n-1)),e}}
 // 월별 상세 표시 기간: 처음엔 전월·이번 달·다음 달(3개월), 이후엔 사용자가 고른 기간 유지
 let GR=null;
 const gridDefault=()=>{const n=nowYM();return{s:addM(n,-1),e:addM(n,1)}};
-// 월별 요약 표시 기간 (종합 현황과 따로): 처음엔 최근 6개월
+// 월별 요약 표시 기간 (종합 현황과 따로): 처음엔 최근 3개월, '이번 달' 버튼으로 이번 달만 보기
 let SP={s:"",e:""};
 function sumRange(r){const e=nowYM();if(r==="ytd")return{s:e.slice(0,4)+"-01",e};if(r==="pm2")return{s:addM(e,-2),e:addM(e,2)};return{s:addM(e,-(+r-1)),e}}
 function markSChips(){document.querySelectorAll(".chip[data-sr]").forEach(b=>{const d=sumRange(b.dataset.sr);b.classList.toggle("on",d.s===SP.s&&d.e===SP.e)})}
@@ -722,7 +723,7 @@ function setSum(s,e){if(!isYM(s)||!isYM(e))return;if(s>e)[s,e]=[e,s];if(range(s,
 $("ss").onchange=$("se").onchange=()=>setSum($("ss").value,$("se").value);
 document.querySelectorAll(".chip[data-sr]").forEach(b=>b.onclick=()=>{const d=sumRange(b.dataset.sr);setSum(d.s,d.e)});
 function initRanges(){if(!P.s)setRecent(1);$("ps").value=P.s;$("pe").value=P.e;
-  if(!SP.s)SP=sumRange("6");$("ss").value=SP.s;$("se").value=SP.e;markSChips();
+  if(!SP.s)SP=sumRange("3");$("ss").value=SP.s;$("se").value=SP.e;markSChips();
   if(M){if(!GR)GR=gridDefault();M.gs=GR.s;M.ge=GR.e;$("gs").value=M.gs;$("ge").value=M.ge;markGNow()}markChips()}
 function markGNow(){const n=nowYM();$("gNow").classList.toggle("on",!!M&&M.gs===n&&M.ge===n)}
 function markChips(){const e=nowYM();document.querySelectorAll(".chip[data-r]").forEach(b=>{const r=b.dataset.r;
