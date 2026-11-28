@@ -812,7 +812,7 @@ function renderSummary(){if(!M)return;
 }
 
 /* ---------- 종합 현황: 월별 추이 그래프 (종합 현황 누계 기간 기준, 펼쳤을 때만 그림) ----------
-   수입·저축투자·지출 = 막대, 잔액 = 선. 모두 같은 금액 축(원) 하나 사용 */
+   수입·저축투자·지출·잔액 모두 선. 같은 금액 축(원) 하나 사용 */
 const TS=[["inc","수입","수입","--a-inc"],["inv","저축투자","저축·투자","--a-inv"],["exp","지출","지출","--a-exp"]];
 const man=v=>{const a=Math.abs(v);return a>=1e8?(v/1e8).toFixed(a>=1e9?0:1).replace(/\.0$/,"")+"억":a>=1e4?Math.round(v/1e4).toLocaleString("ko-KR")+"만":N(v)};
 function niceStep(raw){if(!(raw>0))return 1;const p=10**Math.floor(Math.log10(raw)),f=raw/p;return(f<=1?1:f<=2?2:f<=2.5?2.5:f<=5?5:10)*p}
@@ -822,31 +822,31 @@ function renderTrend(D){
   if(!box.open)return;
   D=D||aggregate(P.s,P.e);
   const n=ms.length,ser=TS.map(([k,g,l,c])=>({k,l,c,v:D.R[g].byM})),bal=D.bal.byM;
-  $("trendLegend").innerHTML=ser.map(s=>`<span><i style="background:var(${s.c})"></i>${s.l}</span>`).join("")+`<span><i class="ln" style="background:var(--a-bal)"></i>잔액</span>`;
+  const L=[...ser,{k:"bal",l:"잔액",c:"--a-bal",v:bal}]; // 네 가지 모두 선으로 비교
+  $("trendLegend").innerHTML=L.map(s=>`<span><i class="ln" style="background:var(${s.c})"></i>${s.l}</span>`).join("");
   const el=$("trend");
   if(![...ser.flatMap(s=>s.v),...bal].some(v=>v)){el.innerHTML=`<div class="loading">이 기간에 입력된 금액이 없습니다. 위의 누계 기간을 바꿔 보세요.</div>`;return}
   const all=[...ser.flatMap(s=>s.v),...bal,0];let hi=Math.max(...all),lo=Math.min(...all);
   const step=niceStep((hi-lo)/4||1);hi=Math.ceil(hi/step)*step;lo=Math.floor(lo/step)*step;if(hi===lo)hi=lo+step;
   const H=240,pl=52,pr=10,pt=12,pb=26,band=Math.max(46,((el.clientWidth||600)-pl-pr)/n),W=pl+pr+band*n;
-  const y=v=>pt+(hi-v)/(hi-lo)*(H-pt-pb),y0=y(0),bw=Math.max(4,Math.min(18,(band*.72-4)/3)),cx=j=>pl+band*j+band/2;
-  const bar=(x,v)=>{const yt=y(v),h=Math.abs(yt-y0);if(h<.5)return"";const r=Math.min(4,h,bw/2),w=bw;
-    return v>=0?`M${x},${y0}V${yt+r}Q${x},${yt} ${x+r},${yt}H${x+w-r}Q${x+w},${yt} ${x+w},${yt+r}V${y0}Z`
-               :`M${x},${y0}V${yt-r}Q${x},${yt} ${x+r},${yt}H${x+w-r}Q${x+w},${yt} ${x+w},${yt-r}V${y0}Z`};
+  const y=v=>pt+(hi-v)/(hi-lo)*(H-pt-pb),cx=j=>pl+band*j+band/2;
   let g="";
   for(let t=lo;t<=hi+step/2;t+=step){const yy=y(t);g+=`<line class="${t===0?"zl":"gl"}" x1="${pl}" x2="${W-pr}" y1="${yy}" y2="${yy}"/><text class="ax" x="${pl-6}" y="${yy+4}" text-anchor="end">${man(t)}</text>`}
   const every=Math.ceil(n/(band<60?8:14)),cur=nowYM();
-  ms.forEach((m,j)=>{if(j%every===0||j===n-1)g+=`<text class="ax" x="${cx(j)}" y="${H-8}" text-anchor="middle"${m===cur?' style="font-weight:700;fill:var(--tx)"':""}>’${m.slice(2,4)}.${+m.slice(5)}</text>`;
-    const x0=cx(j)-(bw*3+4)/2;ser.forEach((s,k)=>{const d=bar(x0+k*(bw+2),s.v[j]);if(d)g+=`<path d="${d}" fill="var(${s.c})"/>`})});
-  if(n>1)g+=`<polyline points="${bal.map((v,j)=>cx(j)+","+y(v)).join(" ")}" fill="none" stroke="var(--a-bal)" stroke-width="2" stroke-linejoin="round"/>`;
-  bal.forEach((v,j)=>g+=`<circle cx="${cx(j)}" cy="${y(v)}" r="4" fill="var(--a-bal)" stroke="var(--card)" stroke-width="2"/>`);
+  ms.forEach((m,j)=>{if(j%every===0||j===n-1)g+=`<text class="ax" x="${cx(j)}" y="${H-8}" text-anchor="middle"${m===cur?' style="font-weight:700;fill:var(--tx)"':""}>’${m.slice(2,4)}.${+m.slice(5)}</text>`});
+  g+=`<line id="tcross" x1="0" x2="0" y1="${pt}" y2="${H-pb}" stroke="var(--mut)" stroke-width="1" stroke-dasharray="3 3" style="display:none"/>`;
+  L.forEach(s=>{if(n>1)g+=`<polyline points="${s.v.map((v,j)=>cx(j)+","+y(v)).join(" ")}" fill="none" stroke="var(${s.c})" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>`;
+    s.v.forEach((v,j)=>g+=`<circle class="pt" data-j="${j}" cx="${cx(j)}" cy="${y(v)}" r="4" fill="var(${s.c})" stroke="var(--card)" stroke-width="2"/>`)});
   ms.forEach((m,j)=>g+=`<rect class="hit" data-j="${j}" x="${pl+band*j}" y="${pt}" width="${band}" height="${H-pt-pb}"/>`);
   el.innerHTML=`<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="월별 수입·저축투자·지출·잔액 추이">${g}</svg><div class="ttip" id="ttip"></div>`;
   const tip=$("ttip"),svg=el.querySelector("svg");
-  const show=j=>{svg.querySelectorAll(".hit").forEach(r=>r.classList.toggle("on",+r.dataset.j===j));
+  const cross=$("tcross");
+  const show=j=>{cross.setAttribute("x1",cx(j));cross.setAttribute("x2",cx(j));cross.style.display="";
+    svg.querySelectorAll(".pt").forEach(c=>c.setAttribute("r",+c.dataset.j===j?6:4));
     tip.innerHTML=`<b>${lab(ms[j])}</b>`+ser.map(s=>`<div><span><i style="background:var(${s.c})"></i>${s.l}</span><span>${N(s.v[j])}원</span></div>`).join("")+
       `<div><span><i style="background:var(--a-bal)"></i>잔액</span><span${bal[j]<0?' class="neg"':""}>${N(bal[j])}원</span></div>`;
     tip.style.display="block";const x=cx(j)-el.scrollLeft,tw=tip.offsetWidth;tip.style.left=Math.max(0,Math.min(el.clientWidth-tw,x+12>el.clientWidth-tw?x-tw-12:x+12))+"px";tip.style.top="8px"};
-  const hide=()=>{tip.style.display="none";svg.querySelectorAll(".hit.on").forEach(r=>r.classList.remove("on"))};
+  const hide=()=>{tip.style.display="none";cross.style.display="none";svg.querySelectorAll(".pt").forEach(c=>c.setAttribute("r",4))};
   svg.addEventListener("pointermove",e=>{const r=e.target.closest(".hit");r?show(+r.dataset.j):hide()});
   svg.addEventListener("pointerdown",e=>{const r=e.target.closest(".hit");if(r)show(+r.dataset.j)});
   svg.addEventListener("pointerleave",e=>{if(e.pointerType==="mouse")hide()});
