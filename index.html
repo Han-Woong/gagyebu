@@ -152,6 +152,7 @@ th.cur{background:#3a6fd0 !important}
 .grid td.ds{text-align:left;white-space:normal;color:var(--mut);font-size:12px;line-height:1.4;padding:2px 6px;overflow:hidden}
 .grid td.ds input.txt{font-size:12px;color:var(--tx)}
 .grid.nodesc .ds{display:none}
+.grid.nobud .s3{display:none}
 .grid .cv{display:flex;align-items:center;justify-content:flex-end;gap:2px}
 .grid .cv input.num{min-width:84px}
 .vr{font-size:10.5px;font-weight:600;margin-left:3px;white-space:nowrap}
@@ -352,6 +353,7 @@ details.cm[open] summary::after{content:"접기 ▴"}
       <button class="sm save" id="saveBtn" disabled title="변경한 내용을 엑셀 파일에 저장합니다">💾 저장</button>
       <button class="sm" id="undoBtn" disabled title="저장하지 않은 변경을 버리고 엑셀 파일 내용으로 되돌립니다">↺ 변경 취소</button>
       <label class="ck"><input type="checkbox" id="showDesc"> 항목설명 보기</label>
+      <label class="ck"><input type="checkbox" id="showBud"> 월 예산 계획액 보기</label>
       <span class="lb">실적 옆 (▲▼%)는 월 예산 계획액 대비 증감 · <span style="color:var(--blue)">파랑</span> 좋음 · <span style="color:var(--bad)">빨강</span> 주의</span>
     </div>
     <div class="scroll" id="gridWrap"><table class="grid" id="grid"></table></div>
@@ -872,6 +874,7 @@ function gridHint(hidden){$("gHint").textContent=EDIT?"(편집 중 — 다 고�
 function renderGrid(){
   const ms=range(M.gs,M.ge),cur=nowYM();
   $("grid").classList.toggle("nodesc",!$("showDesc").checked);
+  $("grid").classList.toggle("nobud",!$("showBud").checked);
   let h=`<thead><tr><th class="s1">구분</th><th class="s2">항목명</th><th class="ds">항목설명</th><th class="s3">월 예산 계획액</th>${ms.map(m=>`<th${m===cur?' class="cur"':""}>${lab(m)}</th>`).join("")}<th class="sum">합계</th><th class="avg">월평균</th></tr></thead><tbody>`;
   // 보기 모드: 선택한 기간에 금액이 하나도 없는 항목은 숨김 (편집 모드에서는 모두 표시)
   let hidden=0;
@@ -908,6 +911,11 @@ $("editBtn").onclick=()=>{if(EDIT&&document.activeElement&&$("grid").contains(do
   $("showDesc").checked=v===null?!matchMedia("(max-width:640px)").matches:v==="1";
   $("showDesc").onchange=()=>{try{localStorage.setItem("chad-desc",$("showDesc").checked?"1":"0")}catch(e){}
     $("grid").classList.toggle("nodesc",!$("showDesc").checked)};
+  // 월 예산 계획액 열: 처음엔 숨김, 체크하면 보임 (기기별로 기억)
+  let b=null;try{b=localStorage.getItem("chad-bud")}catch(e){}
+  $("showBud").checked=b==="1";
+  $("showBud").onchange=()=>{try{localStorage.setItem("chad-bud",$("showBud").checked?"1":"0")}catch(e){}
+    $("grid").classList.toggle("nobud",!$("showBud").checked)};
   setEdit(false)})();
 function updTotals(){
   const ms=range(M.gs,M.ge),B={수입:0,저축투자:0,지출:0},A={};
